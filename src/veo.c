@@ -13,8 +13,6 @@ unsigned char raw_tx[MAX_TX_RAW_LENGTH];
 static const char *tx_types[] = {"create_acc_tx", "spend"};
 static const char not_supported[] = "tx type not supported";
 
-void format_veo(const uint, char*, unsigned char);
-
 static void parse_tx_data(char dst[][92], unsigned char fields,
                           const unsigned char *src) {
   const unsigned char *start = src + 1;
@@ -54,10 +52,12 @@ void prepare_text_description(void) {
        (os_memcmp(data[0], tx_types[1], len) == 0) ) {
 
     char amount[20];
-    format_veo(atoi(data[5]), amount, 20);
+    // format_veo(data[5], 2, amount, 20);
+    adjust_decimals(data[5], strlen(data[5]), amount, 20, 8);
 
     char fee[20];
-    format_veo(atoi(data[3]), fee, 20);
+    // format_veo(data[3], 2, fee, 20);
+    adjust_decimals(data[3], strlen(data[3]), fee, 20, 8);
 
     snprintf(txinfo, 30, "%s VEO", amount);
     data[4][21] = '\0';
@@ -99,22 +99,5 @@ void derive_amoveo_keys(unsigned char *bip44_in,
     // generate the public key.
     cx_ecdsa_init_public_key(CX_CURVE_256K1, NULL, 0, publicKey);
     cx_ecfp_generate_pair(CX_CURVE_256K1, publicKey, privateKey, 1);
-  }
-}
-
-void format_veo(const uint amount, char* out, unsigned char len) {
-  const uint int_part = amount / 100000000;
-  const uint frac_part = amount - int_part * 100000000;
-
-  if (frac_part == 0) {
-    snprintf(out, len, "%d", int_part);
-  } else {
-    snprintf(out, len, "%d.%08d", int_part, frac_part);
-
-    char *p;
-    for (p = out + strlen(out) - 1; p > out; p--) {
-      if (*p != '0') break;
-      else *p = '\0';
-    }
   }
 }
