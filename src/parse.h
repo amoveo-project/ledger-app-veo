@@ -3,7 +3,6 @@
 
 #include "os.h"
 
-#include "jsmn.h"
 #include "base64.h"
 #include "utils.h"
 

@@ -1,7 +1,9 @@
+#define JSMN_STATIC
+#include "jsmn.h"
 #include "parse.h"
 
 
-static void write_int(int value, char *out) {
+static void write_int(unsigned int value, char *out) {
     *out++ = 0xff & (value >> 24);
     *out++ = 0xff & (value >> 16);
     *out++ = 0xff & (value >> 8);
@@ -25,7 +27,7 @@ int parse(char *src, unsigned int src_len, char *result){
     int len;
 
     for (int i=1; i<11; i++) {
-        if (tokens[i].type == 0)
+        if (tokens[i].type > JSMN_PRIMITIVE || tokens[i].type < JSMN_OBJECT)
             break;
 
         *(src + tokens[i].end) = '\0';
@@ -34,20 +36,24 @@ int parse(char *src, unsigned int src_len, char *result){
         PRINTF("Token:\n%.*h \n\n", tokens[i].end - tokens[i].start, token);
 
         if (i > 1) { // atom in the record
-            char first = token[0];
+          // char first = token[0];
 
-            if (first >= '0' && first <= '9') {
+            if (tokens[i].type == JSMN_PRIMITIVE) {
                 *p++ = 3; // int
 
-                int num = atoi(token);
+                uint64_t num = atol(token);
 
-                for (char n=0; n<15; n++) {
-                    write_int(0, p);
-                    p += 4;
+                PRINTF("NUM: %.*h\n\n", 8, &num);
+
+                for (char n=0; n<7; n++) {
+                  write_int(0, p);
+                  write_int(0, p + 4);
+                  p += 8;
                 }
 
-                write_int(num, p);
-                p += 4;
+                write_int((uint32_t)(num >> 32), p);
+                write_int((uint32_t)(num), p + 4);
+                p += 8;
 
             } else {
                 *p++ = 0; // string
