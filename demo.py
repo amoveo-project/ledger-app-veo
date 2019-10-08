@@ -47,13 +47,13 @@ privateKey = keys[65:]
 print ("\nPublic key: %s, length: %d\n" % (base64.b64encode(publicKey), len(publicKey)))
 
 # create acc
-_textToSign_create_acc = '["create_acc_tx","BNKQhfy4bRm3We9E+DXS7dhWp2avHSN2sIDuOlpJjWwl8Lo1FdKfNhk63yTFlXe685URVRDfbXPY16HlXDqYagg=",9,151168,"BFRPiXyi8DRZ/6u+MRFMQHUY339lVPHrkuF0u5ReA1fmFirF5d7+aioFOJQOcPTPJ3rpogolInseoudaOKIwgC8=",13700000000]'
+_textToSign_create_acc = '["create_acc_tx","BNKQhfy4bRm3We9E+DXS7dhWp2avHSN2sIDuOlpJjWwl8Lo1FdKfNhk63yTFlXe685URVRDfbXPY16HlXDqYagg=",9,151168,"BISfsSempA2CkvEsVgCPlIQIulE1m01EN+kjY/wybFIZOH5JLYd2xBTWPfSY7pQ0MUkBsby+w/AbLTlBmySw1wg=",100000]'
 
 # spend 1
 _textToSign_spend1 = '["spend","BB3G8DfYtkZurxIxAGw2Y8ELhVx8WyjjqAdoVptOB+tW5cQsj93XGflHJBrFKpgEFWTUKKYKDM8GYPu4eUM+DCg=",4,60707,"BNKQhfy4bRm3We9E+DXS7dhWp2avHSN2sIDuOlpJjWwl8Lo1FdKfNhk63yTFlXe685URVRDfbXPY16HlXDqYagg=",900000,0]'
 
 # spend 2
-_textToSign_spend2 = '["spend","BB3G8DfYtkZurxIxAGw2Y8ELhVx8WyjjqAdoVptOB+tW5cQsj93XGflHJBrFKpgEFWTUKKYKDM8GYPu4eUM+DCg=",136,61657,"BHVfQWRx7I1xmlWw5KJ7l9ijq4tcobFCub68jsmCGaEQXSr/hi0Vpz8+wa0v8ytcTEUu4wJwTfC+7q6r+CPYS20=",10000000,0]'
+_textToSign_spend2 = '["spend","BB3G8DfYtkZurxIxAGw2Y8ELhVx8WyjjqAdoVptOB+tW5cQsj93XGflHJBrFKpgEFWTUKKYKDM8GYPu4eUM+DCg=",136,61657,"BISfsSempA2CkvEsVgCPlIQIulE1m01EN+kjY/wybFIZOH5JLYd2xBTWPfSY7pQ0MUkBsby+w/AsLTlBmySw1wg=",10000000,0]'
 
 # oracle bet
 _textToSign_bet = '["oracle_bet","BGJJ08FDDFCQ8w3G3AbrL/qjEQJXWZsLqIqrmyoH3Vhy709+UlkJLgA2KarZTfXQg5E46jd918Nl9AkexDUKNzI=",1137,152118,"OaQb/xyYNbqrT4p/P8i7wfvo7zWo7GkCUBFfI8RuRNE=",2,100000000]'
