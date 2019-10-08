@@ -439,7 +439,7 @@ static void amoveo_main(void) {
 
             flags |= IO_ASYNCH_REPLY;
 
-            hashTainted = 1;
+            // hashTainted = 1;
 
           } else {
             THROW(0x9000);
@@ -519,8 +519,14 @@ unsigned char io_event(unsigned char channel) {
       });
     break;
 
-    // unknown events are acknowledged
+  case SEPROXYHAL_TAG_STATUS_EVENT:
+    if (G_io_apdu_media == IO_APDU_MEDIA_USB_HID && !(U4BE(G_io_seproxyhal_spi_buffer, 3) & SEPROXYHAL_TAG_STATUS_EVENT_FLAG_USB_POWERED)) {
+      THROW(EXCEPTION_IO_RESET);
+    }
+    // no break is intentional
+
   default:
+    // unknown events are acknowledged
     UX_DEFAULT_EVENT();
     break;
   }
