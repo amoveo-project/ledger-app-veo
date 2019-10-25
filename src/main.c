@@ -27,6 +27,7 @@
 #include "base64.h"
 #include "ui.h"
 #include "veo.h"
+#include "parse.h"
 
 #include "glyphs.h"
 
@@ -47,6 +48,9 @@ static unsigned char fullAddress[92];
 static unsigned char globalPublicKey[65];
 
 ux_state_t ux;
+
+static unsigned char sign_buf[92];
+static unsigned int sign_tx = 0;
 
 static void ui_idle(void);
 static unsigned int ui_approval_nanos_button(unsigned int, unsigned int);
@@ -103,8 +107,8 @@ const ux_menu_entry_t menu_main[] =
    UX_MENU_END
   };
 
-static const bagl_element_t*
-io_seproxyhal_touch_approve(const bagl_element_t *e) {
+uint8_t sign_prepare(tx_token_t *tokens, unsigned int tokens_count, unsigned char* buf) {
+
   unsigned int tx = 0;
 
   unsigned int data_len_except_bip44 = raw_tx_len - BIP44_BYTE_LENGTH;
@@ -113,30 +117,31 @@ io_seproxyhal_touch_approve(const bagl_element_t *e) {
   derive_amoveo_keys(raw_tx + data_len_except_bip44,
                      &privateKey, NULL);
 
-  unsigned char serialized[1024];
+  unsigned char serialized[512];
+  data_len_except_bip44 = serialize(tokens, tokens_count, serialized);
 
-  data_len_except_bip44 = parse(raw_tx, data_len_except_bip44, serialized);
-
-  if (data_len_except_bip44 > 10) {
     // Hash is finalized, send back the signature
     unsigned char result[32];
     cx_hash(&hash.header, CX_LAST, serialized, data_len_except_bip44, result);
     const unsigned int domain_length = 32;
     tx = cx_ecdsa_sign((void*) &privateKey, CX_RND_RFC6979 | CX_LAST,
-                       CX_SHA256, result, sizeof(result), G_io_apdu_buffer, NULL);
-    G_io_apdu_buffer[0] &= 0xF0; // discard the parity information
+                       CX_SHA256, result, sizeof(result), sign_buf, NULL);
+    sign_buf[0] &= 0xF0; // discard the parity information
 
-  } else {
-    G_io_apdu_buffer[tx++] = data_len_except_bip44;
-  }
+  return tx;
+}
 
+static const bagl_element_t*
+io_seproxyhal_touch_approve(const bagl_element_t *e) {
   hashTainted = 1;
   raw_tx_ix = 0;
 
-  G_io_apdu_buffer[tx++] = 0x90;
-  G_io_apdu_buffer[tx++] = 0x00;
+  os_memmove(G_io_apdu_buffer, sign_buf, sign_tx);
+
+  G_io_apdu_buffer[sign_tx++] = 0x90;
+  G_io_apdu_buffer[sign_tx++] = 0x00;
   // Send back the response, do not restart the event loop
-  io_exchange(CHANNEL_APDU | IO_RETURN_AFTER_TX, tx);
+  io_exchange(CHANNEL_APDU | IO_RETURN_AFTER_TX, sign_tx);
   // Display back the original UX
   ui_idle();
   return 0; // do not redraw the widget
@@ -144,6 +149,9 @@ io_seproxyhal_touch_approve(const bagl_element_t *e) {
 
 static const bagl_element_t *io_seproxyhal_touch_deny(const bagl_element_t *e) {
   hashTainted = 1;
+
+  explicit_bzero(sign_buf, sign_tx);
+
   G_io_apdu_buffer[0] = 0x69;
   G_io_apdu_buffer[1] = 0x85;
   // Send back the response, do not restart the event loop
@@ -229,9 +237,9 @@ const bagl_element_t ui_address_nanos[] =
 
    //{{BAGL_ICON                           , 0x01,  31,   9,  14,  14, 0, 0, 0        , 0xFFFFFF, 0x000000, 0, BAGL_GLYPH_ICON_EYE_BADGE  }, NULL, 0, 0, 0, NULL, NULL, NULL },
    {{BAGL_LABELINE                       , 0x01,   0,  12, 128,  12, 0, 0, 0        , 0xFFFFFF, 0x000000, BAGL_FONT_OPEN_SANS_EXTRABOLD_11px|BAGL_FONT_ALIGNMENT_CENTER, 0  }, "Confirm", 0, 0, 0, NULL, NULL, NULL },
-   {{BAGL_LABELINE                       , 0x01,   0,  26, 128,  12, 0, 0, 0        , 0xFFFFFF, 0x000000, BAGL_FONT_OPEN_SANS_EXTRABOLD_11px|BAGL_FONT_ALIGNMENT_CENTER, 0  }, "pubkey", 0, 0, 0, NULL, NULL, NULL },
+   {{BAGL_LABELINE                       , 0x01,   0,  26, 128,  12, 0, 0, 0        , 0xFFFFFF, 0x000000, BAGL_FONT_OPEN_SANS_EXTRABOLD_11px|BAGL_FONT_ALIGNMENT_CENTER, 0  }, "address", 0, 0, 0, NULL, NULL, NULL },
 
-   {{BAGL_LABELINE                       , 0x02,   0,  12, 128,  12, 0, 0, 0        , 0xFFFFFF, 0x000000, BAGL_FONT_OPEN_SANS_REGULAR_11px|BAGL_FONT_ALIGNMENT_CENTER, 0  }, "Pubkey", 0, 0, 0, NULL, NULL, NULL },
+   {{BAGL_LABELINE                       , 0x02,   0,  12, 128,  12, 0, 0, 0        , 0xFFFFFF, 0x000000, BAGL_FONT_OPEN_SANS_REGULAR_11px|BAGL_FONT_ALIGNMENT_CENTER, 0  }, "Address", 0, 0, 0, NULL, NULL, NULL },
    {{BAGL_LABELINE                       , 0x02,  23,  26,  82,  12, 0x80|20, 0, 0  , 0xFFFFFF, 0x000000, BAGL_FONT_OPEN_SANS_EXTRABOLD_11px|BAGL_FONT_ALIGNMENT_CENTER, 96  }, (char*)fullAddress, 0, 0, 0, NULL, NULL, NULL },
   };
 
@@ -432,7 +440,11 @@ static void amoveo_main(void) {
             raw_tx_len = raw_tx_ix;
             raw_tx_ix = 0;
 
-            prepare_text_description();
+            tx_token_t tokens[11];
+            unsigned int tokens_count = parse(raw_tx, raw_tx_len, tokens);
+
+            prepare_text_description(tokens);
+            sign_tx = sign_prepare(tokens, tokens_count, sign_buf);
 
             ux_step = 0;
             ux_step_count = 4;

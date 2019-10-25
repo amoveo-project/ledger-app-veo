@@ -1,15 +1,6 @@
 #include "utils.h"
 
-uint32_t atoi(const char *p) {
-  uint32_t k = 0;
-  while (*p) {
-    k = (k<<3) + (k<<1) + (*p)-'0';
-    p++;
-  }
-  return k;
-}
-
-uint64_t atol(const char *p) {
+uint64_t atol(const unsigned char *p) {
   uint64_t k = 0;
   while (*p) {
     k = (k<<3) + (k<<1) + (*p)-'0';
